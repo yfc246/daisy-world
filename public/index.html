@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>daisyworld</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!-- FONT -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap" rel="stylesheet">
+
+
+    <!--libraries-->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/addons/p5.dom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/addons/p5.sound.min.js"></script>
+
+    <script src="https://p5play.org/v3/planck.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5play/3.33.5/p5play.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+
+</head>
+
+<body>
+    <div id="headline">
+        <h1> DAISYWORLD </h1>
+    </div>
+
+
+    <div id="main-content">
+
+    </div>
+
+    <div id="videoContainer">
+        <video id="myVideo" width="800" height="auto" muted autoplay playsinline></video>
+    </div>
+
+    <div id="textbox">
+
+        <textarea id="wordInput" placeholder="type in here"></textarea>
+        <button id="sendButton">send</button>
+
+    </div>
+
+
+
+    <script src="sketch.js"></script>
+</body>
+
+</html>
