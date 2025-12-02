@@ -31,10 +31,18 @@ function setup() {
   world.gravity.y = 10;
   player = new Sprite(50, 0);
   floor = new Sprite(250, 400, 500, 40, STATIC);
-  // player.color = 'yellow';
+    // floor = new Sprite(250, 400, 1000, 40, STATIC);
+
+  player.color = 'yellow';
   player.color = color(0, 0, 255, 50);
   noStroke();
   floor.color = color(0, 255, 0, 50);
+
+// //curve
+//   new Sprite(250, 150, [100, 15, 100, -15, 100, -15], STA);
+
+// 	new Sprite(200, 0, 20);
+// 	new Sprite(250, 0, 20);
 
 }
 
@@ -65,6 +73,13 @@ function draw() {
     player.vel.y = -4;
     player.vel.x = 3;
   }
+
+  // if (mouse.presses()) {
+  //   // Create a new sprite at the mouse's current position
+  //   let newSprite = new Sprite(mouse.x, mouse.y, 20);
+  //   newSprite.color = color(0, 0, 255, 50); // Set the color of the new sprite
+  //   noStroke();
+  // }
 }
 
 
