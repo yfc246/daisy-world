@@ -1,15 +1,89 @@
 console.log('sketch is working');
 
 /* -------------------------------------------------------------------------- */
+/*                              socket code                                   */
+/* -------------------------------------------------------------------------- */
+
+//1. client side socket variable set up (socket)
+let brightnessSlider = document.getElementById('brightness-slider');
+let brightnessValue = document.getElementById('brightness-value');
+let statusDisplay = document.getElementById('status');
+
+
+// Connect to WebSocket server
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+ws.onopen = () => {
+  console.log('Connected to server');
+  statusDisplay.textContent = 'Connected'; //console error : uncaught type error cannot set 
+  statusDisplay.style.color = 'green';
+};
+
+ws.onclose = () => {
+  console.log('Disconnected from server');
+  statusDisplay.textContent = 'Disconnected';
+  statusDisplay.style.color = 'red';
+};
+
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+  statusDisplay.textContent = 'Error';
+  statusDisplay.style.color = 'red';
+};
+
+//1.2 set up event listeners
+ws.onmessage = (event) => {
+  console.log('Message from server:', event.data);
+  try {
+    const data = JSON.parse(event.data);
+    
+    // Handle initial state from server
+    if (data.type === 'initialState') {
+      brightnessSlider.value = data.state.brightness;
+      brightnessValue.textContent = data.state.brightness;
+    
+    }
+    
+    // Update brightness slider from other clients
+    if (data.type === 'brightness' && data.value !== undefined) {
+      brightnessSlider.value = data.value;
+      brightnessValue.textContent = data.value;
+    }
+    
+  } catch (error) {
+    console.error('Error parsing message:', error);
+  }
+};
+
+//1.2 set up event listeners
+brightnessSlider.addEventListener('input', (e) => {
+  const value = e.target.value;
+  brightnessValue.textContent = value;
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'brightness',
+      value: parseInt(value)
+    }));
+  }
+});
+
+// let cursor1 = document.getElementById('cursor');
+
+// document.addEventListener('mousemove', (e) => {
+//     cursor.style.left = e.clientX + 'px';
+//     cursor.style.top = e.clientY + 'px';
+// });
+
+/* -------------------------------------------------------------------------- */
 /*                              p5.code                                       */
 /* -------------------------------------------------------------------------- */
 let bg;
 let cursor;
 let camera;
-let x = 0;
-let floor, stone;//testing p5 play
-let selectedColor = 'white'; // Default color
-
+// let x = 0;
+let floor, stone;//floor variables for p5 play
+let selectedColor = 'white'; // Default ball color 
 let balls = []; // Array to store all created balls
 
 function preload() {
@@ -28,6 +102,9 @@ function preload() {
 function setup() {
 
   createCanvas(windowWidth, windowHeight);
+  // Hide the default cursor
+  noCursor();
+  
   
 
   // Get the raw DOM video element from HTML - but wait for it to be ready (Claude)

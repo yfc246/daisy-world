@@ -26,13 +26,13 @@
 </head>
 
 <body>
-    <img id="cursor" src="media/cursor.png" alt="cursor">
+    <!-- <img id="cursor" src="media/cursor.png" alt="cursor"> -->
 
     <div id="headline">
 
-            <h1> DAISYWORLD </h1>
-            <button id="aboutBtn" onclick="openAbout()">ABOUT</button>
-        
+        <h1> DAISYWORLD </h1>
+        <button id="aboutBtn" onclick="openAbout()">ABOUT</button>
+
     </div>
 
     <div id="aboutPopup" class="popup-overlay">
@@ -76,6 +76,14 @@
         <button id="blackBtn" class="color-btn black-btn" onclick="selectColor('black')">black daisy</button>
     </div>
 
+    <div>
+        <label for="brightness-slider">Brightness: <span id="brightness-value">0</span></label>
+        <br>
+        <input type="range" id="brightness-slider" min="0" max="255" value="0">
+    </div>
+ <div>
+    <p>Status: <span id="status">Disconnected</span></p>
+  </div>
 
 
     <script src="sketch.js"></script>
