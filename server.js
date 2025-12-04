@@ -5,29 +5,23 @@ import express from 'express';
 import { WebSocketServer } from 'ws'; //import web socket (adam example)
 import path from 'path'; //node js (adam example)
 import { fileURLToPath } from 'url'; //node js (adam example)
-import fs from 'fs'; // Step 1.3. Get access to the file system (webRTC tutorial)
-import https from 'https'; //Step 1.4. Start a secure https server (webRTC tutorial)
+import http from 'http';
 import { Server as SocketIOServer } from 'socket.io'; //socket io from gemini
+
+let app = express();
+const server = http.createServer(app);
+const port = process.env.PORT || 3000;
 
 let __filename = fileURLToPath(import.meta.url); //defining file pathway for the 'import' syntax (adam example)
 let __dirname = path.dirname(__filename); //defining file pathway for the 'import' syntax (adam example)
 
-let app = express();
-
-//serve certificates (webRTC tutorial)
-let serverOptions = {
-  key: fs.readFileSync('local.key'),
-  cert: fs.readFileSync('local.cert')
-};
-let httpsServer = https.createServer(serverOptions, app); //create a server on the app object (webRTC tutorial)
-let wss = new WebSocketServer({ server: httpsServer }); //(adam example)
+let wss = new WebSocketServer({ server }); //(adam example)
 
 app.use('/', express.static('public'));
 
 
 //create a port variable and listen
-let port = process.env.port || 443;
-httpsServer.listen(port, () => {
+server.listen(port, () => {
   console.log('Server listening on port ', port);
 });
 
@@ -42,7 +36,7 @@ httpsServer.listen(port, () => {
 let peers = {};
 
 //STEP 3. Create a web socket server to send signaling messages (webRTC tutorial)
-let io = new SocketIOServer(httpsServer);
+let io = new SocketIOServer(server);
 
 io.sockets.on('connection', (socket) => {
   console.log('We have a new client: ', socket.id);
