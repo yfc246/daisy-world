@@ -28,13 +28,22 @@ body {
 
 }
 
+#background-image {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+}
+
 /* P5 CANVAS */
 canvas {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 10;
-    cursor: url('media/cursor.png') 16 16, auto !important;
+    /* cursor: url('media/cursor.png') 16 16, auto !important; */
 }
 
 #videoContainer {
@@ -174,7 +183,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    /* background: rgba(225, 225, 225, 0.7); */
+    /* background: rgba(0, 0, 0, 0.7); */
     background: none;
 
 
@@ -183,7 +192,7 @@ canvas {
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(50px);
 
 }
 
@@ -198,7 +207,7 @@ canvas {
     height: 600px;
     background: transparent;
     /* border: 2px solid white; */
-    /* border-radius: 15px; */
+    border-radius: 15px;
     color: white;
     cursor: pointer;
     box-shadow: 0 10px 50px rgba(0, 0, 50, 0.5);
@@ -229,7 +238,7 @@ canvas {
     background: transparent;
     border: none;
     /* border-radius: 50%; */
-    color: white;
+    color: #222;
     font-size: 20px;
     cursor: pointer;
     display: flex;
@@ -249,7 +258,7 @@ canvas {
     padding: 60px 40px 40px 40px;
     height: 100%;
     overflow-y: auto;
-    color: #333;
+    color: #222;
 }
 
 .popup-content h2 {
@@ -261,14 +270,18 @@ canvas {
 .popup-content h3 {
     margin-top: 25px;
     margin-bottom: 15px;
-    color: #444;
+    color: #222;
     font-size: 1.3rem;
 }
 
 .popup-content p {
     margin-bottom: 15px;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    color: #222;
+
     line-height: 1.6;
     font-size: 1.1rem;
+    
 }
 
 .popup-content ul {
@@ -278,6 +291,9 @@ canvas {
 
 .popup-content li {
     margin-bottom: 10px;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    color: #222;
+
     line-height: 1.5;
     font-size: 1rem;
 }

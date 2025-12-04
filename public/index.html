@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/addons/p5.dom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.4/lib/addons/p5.sound.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/ml5@1.3.1/dist/ml5.min.js"></script>
     <script src="https://p5play.org/v3/planck.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5play/3.33.5/p5play.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
@@ -29,15 +29,52 @@
     <!-- <img id="cursor" src="media/cursor.png" alt="cursor"> -->
 
     <div id="landing-container">
-        <img src="media/blue-glitter-2.gif" id="background-image" alt="background">
+        <img src="media/glitter-slowed.gif" id="background-image" alt="background">
 
-        <div class="main-content">
+
+        <!-- Screen 1: Introduction -->
+        <div class="screen active" id="screen1">
+            <h1>DAISYWORLD</h1>
+            <!-- <p class="description">
+                Inspired by Daisyworld, a mathematical simulation created by scientist James lovelock in 1983 to prove
+                his Gaia theory,this experience seeks to cultivate an environment that invites audience to observe
+                minute changes made in the environment, see how individual actions feeds into the feedback loop, and how
+                we can co live as organisms with nature as a whole.
+            </p> -->
+            <p class="description">
+             see how individual actions feeds into the feedback loop, and how we can co live as organisms with nature as a whole.
+            </p>
+            <button class="next-btn" onclick="nextScreen(2)">Next</button>
+        </div>
+
+        <!-- Screen 2: Instructions -->
+        <div class="screen" id="screen2">
+            <h2>How to Participate</h2>
+            <p class="instructions">
+                • Choose your daisy color (white or black)<br>
+                • Click to create daisies that interact with the space<br>
+                • Watch as they bounce and flow together<br>
+                • Share this moment with others
+            </p>
+            <button class="back-btn" onclick="nextScreen(1)">← Back</button>
+            <button class="next-btn" onclick="nextScreen(3)">Next</button>
+        </div>
+
+        <!-- Screen 3: Name Input -->
+        <div class="screen" id="screen3">
+            <h2>What's your name?</h2>
+            <input type="text" id="userName" placeholder="Enter your name" maxlength="20">
+            <button class="back-btn" onclick="nextScreen(2)">← Back</button>
+            <button class="enter-btn" onclick="enterExperience()">ENTER</button>
+        </div>
+
+        <!-- <div class="main-content">
             <h1>DAISYWORLD</h1>
             <p>Enter a shared moment</p>
             <button onclick="window.location.href='experience.html'" class="enter-button">
                 ENTER
             </button>
-        </div>
+        </div> -->
     </div>
     <!-- <div id="headline">
         <h1> DAISYWORLD </h1>
@@ -60,6 +97,7 @@
     </div> -->
 
 
+    <script src="landing.js"></script>
 
     <!-- <script src="sketch.js"></script> -->
 </body>
