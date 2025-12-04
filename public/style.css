@@ -65,8 +65,8 @@ canvas {
 
 
 #headline h1 {
-    margin: 0 0 15px 0;
-    color: azure;
+    margin: 30px;
+    color: white;
     font-size: 2em;
 }
 
@@ -127,6 +127,7 @@ canvas {
 }
 
 #aboutBtn {
+    margin: 30px;
     position: absolute;
     font-family: "Tiny5", sans-serif;
     font-weight: 400;

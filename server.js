@@ -9,13 +9,15 @@ import http from 'http';
 import { Server as SocketIOServer } from 'socket.io'; //socket io from gemini
 
 let app = express();
-const server = http.createServer(app);
-const port = process.env.PORT || 3000;
+let server = http.createServer(app);
+let port = process.env.PORT || 3000;
+
+let wss = new WebSocketServer({ server }); //(adam example)
+
 
 let __filename = fileURLToPath(import.meta.url); //defining file pathway for the 'import' syntax (adam example)
 let __dirname = path.dirname(__filename); //defining file pathway for the 'import' syntax (adam example)
 
-let wss = new WebSocketServer({ server }); //(adam example)
 
 app.use('/', express.static('public'));
 
