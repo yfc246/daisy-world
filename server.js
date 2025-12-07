@@ -23,12 +23,12 @@ app.use(express.static('public'));
 
 // DEFAULT ROUTE - Viewers go here
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'viewer.html'));
+  res.sendFile(path.join(__dirname, 'public', 'viewer.html'));
 });
 
 // BROADCAST ROUTE - Only you use this
 app.get('/broadcast', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'broadcaster.html'));
+  res.sendFile(path.join(__dirname, 'public', 'broadcaster.html'));
 });
 
 //create a port variable and listen
@@ -39,78 +39,149 @@ server.listen(port, () => {
 
 
 /* -------------------------------------------------------------------------- */
-/*             webRTC socket(with p5 livemedia) example code from             */
+/*         webRTC socket io (with p5 livemedia) example code from             */
 /*       https://github.com/vanevery/p5LiveMedia/blob/master/server.js        */
 /* -------------------------------------------------------------------------- */
 
 let rooms = {};
+let broadcasters = {}; // Track broadcaster ID per room
 
-// let io = new SocketIOServer(server);
 let io = new SocketIOServer(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
-
+/* --------------------------------------------------------------------- */
+/*                server side ON socket connection                       */
+/* --------------------------------------------------------------------- */
+//socket io ON connections 
 io.sockets.on('connection', function (socket) {
-    console.log(Date.now(), socket.id, "New client (Socket.IO)");
+  console.log(Date.now(), socket.id, "New client (Socket.IO)");
 
-    socket.on('room_connect', function(room) {
-        console.log(Date.now(), socket.id, room, 'room_connect');
-        if (!rooms.hasOwnProperty(room)) {
-            console.log(Date.now(), socket.id, "room doesn't exist, creating it");
-            rooms[room] = [];
-        }
-        rooms[room].push(socket);
-        socket.room = room;
-        
-        let ids = [];
-        for (let i = 0; i < rooms[socket.room].length; i++) {
-            ids.push(rooms[socket.room][i].id);
-        }
-        console.log(Date.now(), socket.id, "ids length: " + ids.length);
-        socket.emit('listresults', ids);
-    });
+  socket.isBroadcaster = false; // NEW: Default is viewer
 
-    socket.on('list', function() {
-        let ids = [];
-        for (let i = 0; i < rooms[socket.room].length; i++) {
-            ids.push(rooms[socket.room][i].id);
+  // NEW: Listen for broadcaster identification
+  socket.on('identify_broadcaster', function () {
+    console.log(Date.now(), socket.id, "🔴 IDENTIFIED AS BROADCASTER");
+    socket.isBroadcaster = true;
+    if (socket.room) {
+      broadcasters[socket.room] = socket.id;
+    }
+  });
+
+  socket.on('room_connect', function (room) {
+    console.log(Date.now(), socket.id, room, 'room_connect');
+    if (!rooms.hasOwnProperty(room)) {
+      console.log(Date.now(), socket.id, "room doesn't exist, creating it");
+      rooms[room] = [];
+    }
+    rooms[room].push(socket);
+    socket.room = room;
+
+    // NEW: If this socket identified as broadcaster, mark it
+    if (socket.isBroadcaster) {
+      broadcasters[room] = socket.id;
+      console.log(Date.now(), socket.id, "🔴 is the BROADCASTER");
+    } else {
+      console.log(Date.now(), socket.id, "👁️ is a VIEWER");
+    }
+
+    // MODIFIED: Only send broadcaster's ID to viewers
+    let ids = [];
+    if (broadcasters[room]) {
+      // If this is a viewer, send them the broadcaster's ID
+      // If this is the broadcaster, send empty array (don't connect to self)
+      if (socket.id !== broadcasters[room]) {
+        ids.push(broadcasters[room]);
+      }
+    }
+    console.log(Date.now(), socket.id, "sending IDs:", ids);
+    socket.emit('listresults', ids);
+  });
+
+  socket.on('list', function () {
+    // MODIFIED: Only return broadcaster's ID
+    let ids = [];
+    if (broadcasters[socket.room] && socket.id !== broadcasters[socket.room]) {
+      ids.push(broadcasters[socket.room]);
+    }
+    console.log(Date.now(), socket.id, "list request - sending IDs:", ids);
+    socket.emit('listresults', ids);
+  });
+
+  socket.on('signal', (to, from, data) => {
+    // NEW: Only allow broadcaster ↔ viewer connections
+    let fromSocket = rooms[socket.room]?.find(s => s.id === from);
+    let toSocket = rooms[socket.room]?.find(s => s.id === to);
+
+    if (!fromSocket || !toSocket) {
+      console.log('Signal rejected: peer not found');
+      return;
+    }
+
+    // Allow only if one of them is the broadcaster
+    if (fromSocket.isBroadcaster || toSocket.isBroadcaster) {
+      console.log('✓ Signal allowed:', from, '→', to);
+      toSocket.emit('signal', to, from, data);
+    } else {
+      console.log('✗ BLOCKED viewer-to-viewer signal:', from, '→', to);
+    }
+  });
+
+
+  socket.on('daisy_created', function (daisyData) {
+    console.log('Daisy created:', daisyData);
+    // Broadcast to everyone in the room EXCEPT the sender
+    if (socket.room && rooms[socket.room]) {
+      for (let i = 0; i < rooms[socket.room].length; i++) {
+        if (rooms[socket.room][i].id !== socket.id) {
+          rooms[socket.room][i].emit('daisy_created', daisyData);
         }
-        console.log(Date.now(), socket.id, "ids length: " + ids.length);
-        socket.emit('listresults', ids);			
-    });
-    
-    socket.on('signal', (to, from, data) => {
-        let found = false;
+      }
+    }
+  });
+
+
+  socket.on('disconnect', function () {
+    console.log(Date.now(), socket.id, "Client has disconnected");
+    if (rooms[socket.room]) {
+      // NEW: Check if THIS socket was the broadcaster
+      let wasBroadcaster = (broadcasters[socket.room] === socket.id);
+
+      if (wasBroadcaster) {
+        console.log('🔴 BROADCASTER disconnected');
+        broadcasters[socket.room] = null;
+
+        // Only emit peer_disconnect if broadcaster left
         for (let i = 0; i < rooms[socket.room].length; i++) {
-            if (rooms[socket.room][i].id == to) {
-                rooms[socket.room][i].emit('signal', to, from, data);
-                found = true;
-                break;
-            }				
-        }	
-    });
-            
-    socket.on('disconnect', function() {
-        console.log(Date.now(), socket.id, "Client has disconnected");
-        if (rooms[socket.room]) {
-            let which = -1;
-            for (let i = 0; i < rooms[socket.room].length; i++) {
-                if (rooms[socket.room][i].id != socket.id) {
-                    rooms[socket.room][i].emit('peer_disconnect', socket.id);
-                } else {
-                    which = i;
-                }
-            }		
-            if (which >= 0 && rooms[socket.room][which].id == socket.id) {
-                rooms[socket.room].splice(which,1);
-            }
+          if (rooms[socket.room][i].id != socket.id) {
+            rooms[socket.room][i].emit('peer_disconnect', socket.id);
+          }
         }
-    });
+      } else {
+        console.log('👁️ VIEWER disconnected (not notifying others)');
+        // Don't emit peer_disconnect for regular viewers
+      }
+
+      // Remove from rooms array
+      let which = -1;
+      for (let i = 0; i < rooms[socket.room].length; i++) {
+        if (rooms[socket.room][i].id == socket.id) {
+          which = i;
+          break;
+        }
+      }
+      if (which >= 0) {
+        rooms[socket.room].splice(which, 1);
+      }
+    }
+  });
+
 });
+
+
 
 
 
@@ -137,6 +208,10 @@ function broadcast(data) {
   });
 }
 
+
+/* --------------------------------------------------------------------- */
+/*                server side ON socket connection                       */
+/* --------------------------------------------------------------------- */
 wss.on('connection', (ws, req) => { //ws is the connected client
   console.log('New client connected');
   clients.add(ws); //add the connected client to the clients set

@@ -1,7 +1,7 @@
 console.log('sketch is working');
 
 /* -------------------------------------------------------------------------- */
-/*                              socket code                                   */
+/*                           ws socket code(adam example)                     */
 /* -------------------------------------------------------------------------- */
 
 //1. client side socket variable set up (socket)
@@ -74,7 +74,6 @@ brightnessSlider.addEventListener('input', (e) => {
 /*                              p5.code                                       */
 /* -------------------------------------------------------------------------- */
 let bg;
-// let camera;
 let video; //for testing ml5
 let floor, stone;//floor variables for p5 play
 let selectedColor = 'white'; // Default selected color 
@@ -92,14 +91,8 @@ function preload() {
 
   // preload() loads the image before setup() runs
   bg = loadImage('media/placeholder.jpg');
-  // bg = loadImage('media/blue-glitter_1.jpg');
 
-  // cursor = loadImage('media/cursor.png');
   // handPose = ml5.handPose();
-
-
-
-  // console.log(bg);
 
 }
 
@@ -129,7 +122,7 @@ function startBroadcaster() {
 
   video = createCapture(VIDEO, (stream) => {
     console.log('BROADCASTER: Webcam ready');
-    
+
     setTimeout(() => {
       videoReady = true;
       console.log('Video dimensions:', video.width, 'x', video.height);
@@ -137,6 +130,21 @@ function startBroadcaster() {
 
     p5l = new p5LiveMedia(this, "CAPTURE", stream, "daisyworld", window.location.origin);
     console.log('BROADCASTER: Broadcasting to "daisyworld"');
+
+    /* --------------------------------------------------------------------- */
+    /*                client side ON socket connection                       */
+    /* --------------------------------------------------------------------- */
+
+    // Listen for daisies from other clients
+    p5l.socket.on('daisy_created', (daisyData) => {
+      console.log('Received daisy from another client:', daisyData);
+      createDaisy(daisyData);
+    });
+
+    // Tell server "I am the broadcaster"
+    setTimeout(() => {
+      p5l.socket.emit('identify_broadcaster');
+    }, 100);
 
     p5l.on('ready', () => {
       console.log('BROADCASTER: ✓ Room ready');
@@ -150,6 +158,8 @@ function startBroadcaster() {
       console.log('BROADCASTER: Viewer disconnected:', id);
     });
   });
+
+
 
   video.muted = true;
   video.hide();
@@ -166,10 +176,9 @@ function startBroadcaster() {
   loop();
 }
 
-//debugging draw
 function draw() {
   // console.log('DRAW IS RUNNING'); // Add this temporarily to see if draw runs
-  
+
   if (!experienceStarted) {
     console.log('Waiting for experience to start');
     return;
@@ -193,50 +202,19 @@ function draw() {
     let h = video.height * videoScaleRatio;
     image(video, (width - w) / 2, (height - h) / 2, w, h);
   }
-  
-  // Debug info
-  fill(255, 0, 0);
-  textSize(20);
-  text('BROADCASTING', 10, 30);
-  text(`Video ready: ${videoReady}`, 10, 60);
-  if (video) {
-    text(`Video size: ${video.width} x ${video.height}`, 10, 90);
-  }
+
+  // // Debug info
+  // fill(255, 0, 0);
+  // textSize(20);
+  // text('BROADCASTING', 10, 30);
+  // text(`Video ready: ${videoReady}`, 10, 60);
+  // if (video) {
+  //   text(`Video size: ${video.width} x ${video.height}`, 10, 90);
+  // }
 }
 
 
-// function draw() {
 
-//   // console.log('🟢 DRAW running, experienceStarted:', experienceStarted); // Remove this after testing - it will spam!
-//  console.log('DRAW IS RUNNING'); 
-
-//   if (!experienceStarted) return;
-
-//   //background image
-//   let bgScale = Math.max(width / bg.width, height / bg.height);
-//   let bgW = bg.width * bgScale;
-//   let bgH = bg.height * bgScale;
-//   image(bg, (width - bgW) / 2, (height - bgH) / 2, bgW, bgH);
-
-
-//   // Draw webcam video
-//   if (video) {
-//     let vScale = Math.max(width / video.width, height / video.height);
-//     let w = video.width * vScale;
-//     let h = video.height * vScale;
-//     image(video, (width - w) / 2, (height - h) / 2, w, h);
-//   }
-
-//   // Debug info
-//   fill(255, 0, 0);
-//   textSize(20);
-//   text('BROADCASTING', 10, 30);
-//   if (video) {
-//     text(`Video ready: ${videoReady}`, 10, 60);
-//     text(`Video size: ${video.width} x ${video.height}`, 10, 90);
-//   }
-
-// }
 
 
 /* -------------------------------------------------------------------------- */
@@ -311,29 +289,43 @@ function selectColor(color) {
 }
 
 function mousePressed() {
+  // Create daisy data object
+  let daisyData = {
+    x: mouseX,
+    y: mouseY,
+    color: selectedColor,
+    timestamp: Date.now()
+  };
 
-  //sprite set up for 6 petal daisy
-  let daisy6 = new Sprite(mouseX, mouseY);
+  // Create daisy locally
+  createDaisy(daisyData);
+
+  // Emit to all other clients via Socket.IO
+  if (p5l && p5l.socket) {
+    p5l.socket.emit('daisy_created', daisyData);
+    console.log('Emitted daisy:', daisyData);
+  }
+}
+
+// Separate function to create daisy (so we can reuse it)
+function createDaisy(daisyData) {
+  let daisy6 = new Sprite(daisyData.x, daisyData.y);
   daisy6.diameter = 20;
   daisy6.bounciness = 0.7;
 
-
-  // Set color based on selection
-  if (selectedColor === 'white') {
+  if (daisyData.color === 'white') {
     daisy6.image = 'media/w-daisy-6.png';
     daisy6.image.scale = 0.8;
   } else {
     daisy6.image = 'media/b-daisy-6.png';
-
   }
 
-  // Add some initial velocity
   daisy6.vel.x = random(-2, 2);
   daisy6.vel.y = random(-3, 1);
 
-  // balls.push(ball);
   daisy6Ary.push(daisy6);
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*                      about pop up page                                     */
