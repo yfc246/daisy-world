@@ -10,9 +10,10 @@ let brightnessValue = document.getElementById('brightness-value');
 let statusDisplay = document.getElementById('status');
 
 
-// Connect to WebSocket server
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(`${protocol}//${window.location.host}`);
+// Connect to WebSocket server for arduino
+let protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+// const ws = new WebSocket(`${protocol}//${window.location.host}`);
+let ws = new WebSocket(`${protocol}//${window.location.host}/arduino`);
 
 ws.onopen = () => {
   console.log('Connected to server');
@@ -68,26 +69,24 @@ brightnessSlider.addEventListener('input', (e) => {
   }
 });
 
-// let cursor1 = document.getElementById('cursor');
-
-// document.addEventListener('mousemove', (e) => {
-//     cursor.style.left = e.clientX + 'px';
-//     cursor.style.top = e.clientY + 'px';
-// });
 
 /* -------------------------------------------------------------------------- */
 /*                              p5.code                                       */
 /* -------------------------------------------------------------------------- */
 let bg;
-let cursor;
-let camera;
+// let camera;
 let video; //for testing ml5
 let floor, stone;//floor variables for p5 play
 let selectedColor = 'white'; // Default selected color 
 let daisy6Ary = []; //6 petal daisy array
 
-let handPose; //ml5
-let hands = [];// array for hands keypoints
+let p5l; //p5 live media connection
+let experienceStarted = false;
+let videoReady = false; // for video timing
+
+
+// let handPose; //ml5
+// let hands = [];// array for hands keypoints
 
 function preload() {
 
@@ -96,130 +95,150 @@ function preload() {
   // bg = loadImage('media/blue-glitter_1.jpg');
 
   // cursor = loadImage('media/cursor.png');
-  handPose = ml5.handPose();
+  // handPose = ml5.handPose();
 
 
 
-  console.log(bg);
+  // console.log(bg);
 
 }
 
 function setup() {
 
-  createCanvas(windowWidth, windowHeight);
-  // // Hide the default cursor
-  // noCursor();
+  noCanvas(); //no canvas yet, wait for startBroaccaster()
 
-  // video = createCapture(VIDEO);
-  // video.size(windowWidth, windowHeight);
-  // video.hide();
-  // handPose.detectStart(video, gotHands);
+}
 
-  // Get the raw DOM video element from HTML - but wait for it to be ready (Claude)
-  setTimeout(() => {
-    camera = document.getElementById('myVideo');
-    console.log('Camera element:', camera);
-  }, 100);
 
-  // //world set up for p5 play
+
+// Called by landing.js when user clicks "Enter"
+function startBroadcaster() {
+  console.log('startBroadcaster() called');
+  experienceStarted = true;
+
+  let canvas = createCanvas(windowWidth, windowHeight);
+  canvas.parent('main-content');
+  console.log('Canvas created');
+
+  console.log('BROADCASTER: Starting webcam...');
+
   world.gravity.y = 8;
   createFloor();
   createStone();
   noStroke();
 
+  video = createCapture(VIDEO, (stream) => {
+    console.log('BROADCASTER: Webcam ready');
+    
+    setTimeout(() => {
+      videoReady = true;
+      console.log('Video dimensions:', video.width, 'x', video.height);
+    }, 500);
 
+    p5l = new p5LiveMedia(this, "CAPTURE", stream, "daisyworld", window.location.origin);
+    console.log('BROADCASTER: Broadcasting to "daisyworld"');
 
+    p5l.on('ready', () => {
+      console.log('BROADCASTER: ✓ Room ready');
+    });
 
+    p5l.on('connection', (id) => {
+      console.log('BROADCASTER: ✓ New viewer connected! ID:', id);
+    });
 
-}
+    p5l.on('disconnect', (id) => {
+      console.log('BROADCASTER: Viewer disconnected:', id);
+    });
+  });
 
+  video.muted = true;
+  video.hide();
 
-
-function draw() {
-
-  let bgScale = Math.max(width / bg.width, height / bg.height);
-    let bgW = bg.width * bgScale;
-    let bgH = bg.height * bgScale;
-    image(bg, (width - bgW) / 2, (height - bgH) / 2, bgW, bgH);
-  // image(bg, 0, 0, width, height);
-  // angleMode(DEGREES);
-
-
-   try {
-        if (camera && camera.readyState >= 2 && camera.videoWidth > 0) {
-            let scale = Math.max(width / camera.videoWidth, height / camera.videoHeight);
-            let w = camera.videoWidth * scale;
-            let h = camera.videoHeight * scale;
-            drawingContext.drawImage(camera, (width - w) / 2, (height - h) / 2, w, h);
-        }
-    } catch (e) {
-        console.error('Error drawing video:', e);
+  // FIX: Force canvas to be visible after video.hide()
+  setTimeout(() => {
+    let canvasElement = document.querySelector('canvas');
+    if (canvasElement) {
+      canvasElement.style.visibility = 'visible';
+      console.log('Canvas visibility fixed');
     }
+  }, 100);
 
-  // // Draw the video
-  // try {
-  //   if (camera && camera.readyState >= 2) { //checking if video has loaded 
-  //     drawingContext.drawImage(camera, (width - 800) / 2, (height - 600) / 2, 800, 600); //using this instead of image() because it was giving error other wise (claude)
-  //   }
-  // } catch (e) {
-  //   console.error('Error drawing video:', e);
-  // }
-
-  // Draw the video(full screen )
-//  try {
-//     if (camera && camera.readyState >= 2 && camera.videoWidth > 0) {
-//         let videoW = camera.videoWidth;
-//         let videoH = camera.videoHeight;
-        
-//         let scale = Math.max(width / videoW, height / videoH);
-//         let scaledW = videoW * scale;
-//         let scaledH = videoH * scale;
-        
-//         drawingContext.drawImage(
-//             camera, 
-//             (width - scaledW) / 2, 
-//             (height - scaledH) / 2, 
-//             scaledW, 
-//             scaledH
-//         );
-//     }
-// } catch (e) {
-//     console.error('Error drawing video:', e);
-// }
-
-  // image(cursor, mouseX, mouseY);
-
-  //ml5
-  // push();
-  // // Draw the video
-  // imageMode(CENTER);
-  // let scale = width / bg.width;
-  // image(video, width/2, height/2, bg.width * scale, bg.height * scale);
-  // pop();
-    // try {
-  //   if (camera && camera.readyState >= 2) { //checking if video has loaded 
-  //     drawingContext.drawImage(camera, (width - 800) / 2, (height - 600) / 2, 800, 600); //using this instead of image() because it was giving error other wise (claude)
-  //   }
-  // } catch (e) {
-  //   console.error('Error drawing video:', e);
-  // }
-
-  // for (let i = 0; i < hands.length; i++) {
-  //   let hand = hands[i];
-  //   for (let j = 0; j < hand.keypoints.length; j++) {
-  //     let keypoint = hand.keypoints[j];
-  //     fill(0, 255, 0);
-  //     noStroke();
-  //     circle(keypoint.x, keypoint.y, 10);
-  //   }
-  // }
+  loop();
 }
 
-// //for ml5
-// function gotHands(results) {
-//   console.log(results);
-//   hands = results;
+//debugging draw
+function draw() {
+  // console.log('DRAW IS RUNNING'); // Add this temporarily to see if draw runs
+  
+  if (!experienceStarted) {
+    console.log('Waiting for experience to start');
+    return;
+  }
+
+  background(0); // Start with simple black background
+
+  // Background image
+  if (bg) {
+    let bgScaleRatio = Math.max(width / bg.width, height / bg.height);
+    let bgW = bg.width * bgScaleRatio;
+    let bgH = bg.height * bgScaleRatio;
+    image(bg, (width - bgW) / 2, (height - bgH) / 2, bgW, bgH);
+  }
+
+  // Draw webcam video
+  if (videoReady && video && video.width > 0) {
+    // console.log('Drawing video'); // Temporary debug
+    let videoScaleRatio = Math.max(width / video.width, height / video.height);
+    let w = video.width * videoScaleRatio;
+    let h = video.height * videoScaleRatio;
+    image(video, (width - w) / 2, (height - h) / 2, w, h);
+  }
+  
+  // Debug info
+  fill(255, 0, 0);
+  textSize(20);
+  text('BROADCASTING', 10, 30);
+  text(`Video ready: ${videoReady}`, 10, 60);
+  if (video) {
+    text(`Video size: ${video.width} x ${video.height}`, 10, 90);
+  }
+}
+
+
+// function draw() {
+
+//   // console.log('🟢 DRAW running, experienceStarted:', experienceStarted); // Remove this after testing - it will spam!
+//  console.log('DRAW IS RUNNING'); 
+
+//   if (!experienceStarted) return;
+
+//   //background image
+//   let bgScale = Math.max(width / bg.width, height / bg.height);
+//   let bgW = bg.width * bgScale;
+//   let bgH = bg.height * bgScale;
+//   image(bg, (width - bgW) / 2, (height - bgH) / 2, bgW, bgH);
+
+
+//   // Draw webcam video
+//   if (video) {
+//     let vScale = Math.max(width / video.width, height / video.height);
+//     let w = video.width * vScale;
+//     let h = video.height * vScale;
+//     image(video, (width - w) / 2, (height - h) / 2, w, h);
+//   }
+
+//   // Debug info
+//   fill(255, 0, 0);
+//   textSize(20);
+//   text('BROADCASTING', 10, 30);
+//   if (video) {
+//     text(`Video ready: ${videoReady}`, 10, 60);
+//     text(`Video size: ${video.width} x ${video.height}`, 10, 90);
+//   }
+
 // }
+
+
 /* -------------------------------------------------------------------------- */
 /*                         p5 play physics set up                             */
 /* -------------------------------------------------------------------------- */
@@ -272,6 +291,9 @@ function createStone() {
   stone.color = color(0, 0, 0, 1);
 }
 
+/* -------------------------------------------------------------------------- */
+/*                         p5 interactions                                    */
+/* -------------------------------------------------------------------------- */
 
 //for selecting daisy color with html button 
 function selectColor(color) {
@@ -338,63 +360,4 @@ function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   createFloor(); // Recreate floor with new proportions
 }
-
-// let customCursor = document.getElementById('cursor');
-
-// document.addEventListener('mousemove', (e) => {
-//     customCursor.style.left = e.clientX + 'px';
-//     customCursor.style.top = e.clientY + 'px';
-// });
-
-// /* -------------------------------------------------------------------------- */
-// /*                              webRTCcode                                    */
-// /* -------------------------------------------------------------------------- */
-
-/*STEP 5.5. Capture video stream on window load*/
-window.addEventListener('load', () => {
-  initCapture(); //capturing the local (my) camera 
-});
-
-/*Global variables*/
-let myLocalMediaStream;
-let socket;
-let myFriends = {};
-
-/*STEP 5. Capture video stream*/
-function initCapture() {
-  console.log('init capture');
-
-  /* STEP. 5.1. This element will display my webcam*/
-  let videoEl = document.getElementById('myVideo');
-
-  /*STEP 5.2. Video constraints for webcam to fulfill*/
-  let constraints = { audio: false, video: true };
-
-  /*STEP 5.3. Ask for user permission for camera */
-  navigator.mediaDevices
-    .getUserMedia(constraints)
-    .then(stream => { //when the stream is available
-      //use the stream
-      console.log(stream);
-      //set to global variable
-      myLocalMediaStream = stream;
-      /*STEP 5.4. Attach to video object*/
-      videoEl.srcObject = stream;
-
-      //wait for the stream to load enough to play the video
-      videoEl.onloadedmetadata = evt => {
-        // console.log(evt);
-        videoEl.play();
-      };
-    });
-
-  //   /*STEP 6.5. Start socket connection*/
-  //   setupSocket();
-}
-
-
-// //on error
-// peerConnection.on('error', err => {
-//   console.log(err);
-// });
 
