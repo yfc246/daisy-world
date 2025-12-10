@@ -31,6 +31,8 @@ ws.onerror = (error) => {
 };
 
 ws.onmessage = (event) => {
+    console.log('Message from server:', event.data);
+
     try {
         const data = JSON.parse(event.data);
 
@@ -73,6 +75,12 @@ let p5l;
 let myCanvas;
 let hasStarted = false;
 
+// NEW: Store other users' cursors
+let otherCursors = {}; // { socketId: { x, y, name } }
+let myName; //user entered name 
+let myCursorColor; //user picked color 
+
+
 function preload() {
     bg = loadImage('media/placeholder.jpg');
 }
@@ -110,9 +118,20 @@ function startViewer() {
     console.log('VIEWER: Connecting to room...');
     console.log('VIEWER: Server URL:', window.location.origin);
 
+    //get name and color from local storage
+    myName = localStorage.getItem('userName') || 'Anonymous';
+    myCursorColor = localStorage.getItem('cursorColor') || '#64FFC8';
+    console.log('Loaded name:', myName, 'color:', myCursorColor);
+
     // Connect to broadcaster
     p5l = new p5LiveMedia(this, "CANVAS", myCanvas, "daisyworld", window.location.origin);
     console.log('VIEWER: p5LiveMedia created');
+
+    // Send username to server
+    setTimeout(() => {
+        p5l.socket.emit('set_username', myName);
+        console.log('Sent username:', myName);
+    }, 100);
 
 
     /* --------------------------------------------------------------------- */
@@ -122,6 +141,20 @@ function startViewer() {
     p5l.socket.on('daisy_created', (daisyData) => {
         console.log('Received daisy:', daisyData);
         createDaisy(daisyData);
+    });
+
+    // Listen for other users' cursors
+    p5l.socket.on('cursor_move', (data) => {
+        otherCursors[data.id] = {
+            x: data.x,
+            y: data.y,
+            name: data.name
+        };
+    });
+
+    // Remove cursor when user disconnects
+    p5l.socket.on('cursor_removed', (id) => {
+        delete otherCursors[id];
     });
 
     p5l.on('ready', () => {
@@ -171,26 +204,91 @@ function draw() {
         textSize(16);
         text('Waiting for broadcaster...', width / 2, height / 2);
     }
+
+     // Draw other users' cursors 
+  for (let id in otherCursors) {
+    let cursor = otherCursors[id];
+ 
+    fill(150, 150, 150, 150); 
+    noStroke();
+    circle(cursor.x, cursor.y, 15);
+
+    // Draw name
+    fill(255);
+    textFont('Tiny5');
+    textSize(16);
+    textAlign(LEFT, TOP);
+    text(cursor.name, cursor.x + 10, cursor.y + 10);
+  }
+
+  // Draw YOUR cursor
+  if (myCursorColor && typeof myCursorColor === 'string') {
+    let myColor = color(myCursorColor);
+    myColor.setAlpha(150);
+    fill(myColor);
+  } else {
+    // Fallback to default green
+    fill(100, 255, 200, 150);
+  }
+
+  noStroke();
+  circle(mouseX, mouseY, 15);
+  fill(255);
+  textFont('Tiny5');
+  text(myName, mouseX + 10, mouseY + 10);
+
 }
+
+//     // NEW: Draw other users' cursors
+//     for (let id in otherCursors) {
+//         let cursor = otherCursors[id];
+
+//         // Draw cursor dot
+//         fill(255, 100, 200);
+//         noStroke();
+//         circle(cursor.x, cursor.y, 15);
+
+//         // Draw name
+//         fill(255);
+//         textSize(16);
+//         textAlign(LEFT, TOP);
+//         text(cursor.name, cursor.x + 10, cursor.y + 10);
+//     }
+
+//     // Draw YOUR cursor
+//     fill(100, 255, 200);
+//     noStroke();
+//     circle(mouseX, mouseY, 15);
+//     fill(255);
+//     text(myName, mouseX + 10, mouseY + 10);
+// }
 
 /* -------------------------------------------------------------------------- */
 /*                         p5 play physics                                    */
 /* -------------------------------------------------------------------------- */
 
 function createFloor() {
-    if (floor) floor.remove();
+
+    // Remove old floor if it exists for reponsive design (claude)
+    if (floor) {
+        floor.remove();
+    }
+
+    // p5 play chain colliders vertex mode
+
+    let offsetY = 100 / height
 
     floor = new Sprite([
-        [width * 0.2, height * 0.51],
-        [width * 0.267, height * 0.68],
-        [width * 0.333, height * 0.73],
-        [width * 0.4, height * 0.78],
-        [width * 0.467, height * 0.82],
-        [width * 0.533, height * 0.82],
-        [width * 0.6, height * 0.78],
-        [width * 0.667, height * 0.73],
-        [width * 0.733, height * 0.68],
-        [width * 0.8, height * 0.51]
+        [width * 0.2, height * (0.51 + offsetY)],
+        [width * 0.267, height * (0.68 + offsetY)],
+        [width * 0.333, height * (0.73 + offsetY)],
+        [width * 0.4, height * (0.78 + offsetY)],
+        [width * 0.467, height * (0.82 + offsetY)],
+        [width * 0.533, height * (0.82 + offsetY)],
+        [width * 0.6, height * (0.78 + offsetY)],
+        [width * 0.667, height * (0.73 + offsetY)],
+        [width * 0.733, height * (0.68 + offsetY)],
+        [width * 0.8, height * (0.51 + offsetY)]
     ]);
 
     floor.collider = 'static';
@@ -198,15 +296,22 @@ function createFloor() {
 }
 
 function createStone() {
-    if (stone) stone.remove();
 
-    let offsetPx = 40 / height;
+    // Remove old stone if it exists
+    if (stone) {
+        stone.remove();
+    }
+
+    let offsetY = 120 / height; // offset y position for easier adjustment later
 
     stone = new Sprite([
-        [width * 0.4, height * (0.6 + offsetPx)],
-        [width * 0.47, height * (0.51 + offsetPx)],
-        [width * 0.517, height * (0.505 + offsetPx)],
-        [width * 0.55, height * (0.55 + offsetPx)],
+        [width * 0.4, height * (0.58 + offsetY)],
+        // [width * 0.442, height * (0.52 + offsetY)],    
+        [width * 0.46, height * (0.49 + offsetY)],
+        // [width * 0.5, height * (0.5 + offsetY)],       
+        [width * 0.53, height * (0.485 + offsetY)],
+        [width * 0.55, height * (0.5 + offsetY)],
+        // [width * 0.6, height * (0.55 + offsetY)]     
     ]);
 
     stone.collider = 'static';
@@ -230,6 +335,28 @@ function selectColor(color) {
 }
 
 function mousePressed() {
+
+    // Prevent daisy creation on right click
+    if (mouseButton === RIGHT) {
+        return;
+    }
+
+    // Prevent daisy creation when clicking on buttons or UI elements
+    let clickedElement = document.elementFromPoint(mouseX, mouseY);
+
+    if (clickedElement && (
+        clickedElement.tagName === 'BUTTON' ||
+        clickedElement.tagName === 'INPUT' ||
+        clickedElement.tagName === 'LABEL' ||
+        clickedElement.closest('.color-btn') ||
+        clickedElement.closest('#aboutBtn') ||
+        clickedElement.closest('#color-selector') ||
+        clickedElement.closest('.popup-overlay')
+    )) {
+        console.log('Clicked on UI element, no daisy created');
+        return;
+    }
+
     let daisyData = {
         x: mouseX,
         y: mouseY,
@@ -255,12 +382,26 @@ function createDaisy(daisyData) {
         daisy6.image.scale = 0.8;
     } else {
         daisy6.image = 'media/b-daisy-6.png';
+        daisy6.image.scale = 0.8;
     }
 
-    daisy6.vel.x = random(-2, 2);
-    daisy6.vel.y = random(-3, 1);
+    // daisy6.vel.x = random(-2, 2);
+    // daisy6.vel.y = random(-3, 1);
 
     daisy6Ary.push(daisy6);
+}
+
+function mouseMoved() {
+    // Send cursor position to server
+    if (p5l && p5l.socket && hasStarted) {
+        p5l.socket.emit('cursor_move', {
+            x: mouseX,
+            y: mouseY
+        });
+    }
+
+    // Prevent default
+    return false;
 }
 
 

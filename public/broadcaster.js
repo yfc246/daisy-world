@@ -83,6 +83,11 @@ let p5l; //p5 live media connection
 let experienceStarted = false;
 let videoReady = false; // for video timing
 
+// Store other users' cursors
+let otherCursors = {}; // { socketId: { x, y, name } }
+let myName; //user entered name 
+let myCursorColor; //user picked color 
+
 
 // let handPose; //ml5
 // let hands = [];// array for hands keypoints
@@ -109,6 +114,11 @@ function startBroadcaster() {
   console.log('startBroadcaster() called');
   experienceStarted = true;
 
+  //get name and color from local storage
+  myName = localStorage.getItem('userName') || 'Anonymous';
+  myCursorColor = localStorage.getItem('cursorColor') || '#64FFC8';
+  console.log('Loaded name:', myName, 'color:', myCursorColor);
+
   let canvas = createCanvas(windowWidth, windowHeight);
   canvas.parent('main-content');
   console.log('Canvas created');
@@ -131,6 +141,13 @@ function startBroadcaster() {
     p5l = new p5LiveMedia(this, "CAPTURE", stream, "daisyworld", window.location.origin);
     console.log('BROADCASTER: Broadcasting to "daisyworld"');
 
+    // Send username to server
+    setTimeout(() => {
+      p5l.socket.emit('identify_broadcaster');
+      p5l.socket.emit('set_username', myName);
+      console.log('Sent username:', myName);
+    }, 100);
+
     /* --------------------------------------------------------------------- */
     /*                client side ON socket connection                       */
     /* --------------------------------------------------------------------- */
@@ -139,6 +156,20 @@ function startBroadcaster() {
     p5l.socket.on('daisy_created', (daisyData) => {
       console.log('Received daisy from another client:', daisyData);
       createDaisy(daisyData);
+    });
+
+    // Listen for other users' cursors
+    p5l.socket.on('cursor_move', (data) => {
+      otherCursors[data.id] = {
+        x: data.x,
+        y: data.y,
+        name: data.name
+      };
+    });
+
+    // Remove cursor when user disconnects
+    p5l.socket.on('cursor_removed', (id) => {
+      delete otherCursors[id];
     });
 
     // Tell server "I am the broadcaster"
@@ -184,9 +215,7 @@ function draw() {
     return;
   }
 
-  background(0); // Start with simple black background
-
-  // Background image
+  // Background image (if there's no video footage)
   if (bg) {
     let bgScaleRatio = Math.max(width / bg.width, height / bg.height);
     let bgW = bg.width * bgScaleRatio;
@@ -202,6 +231,62 @@ function draw() {
     let h = video.height * videoScaleRatio;
     image(video, (width - w) / 2, (height - h) / 2, w, h);
   }
+
+  // Draw other users' cursors 
+  for (let id in otherCursors) {
+    let cursor = otherCursors[id];
+ 
+    fill(150, 150, 150, 150); 
+    noStroke();
+    circle(cursor.x, cursor.y, 15);
+
+    // Draw name
+    fill(255);
+    textFont('Tiny5');
+    textSize(16);
+    textAlign(LEFT, TOP);
+    text(cursor.name, cursor.x + 10, cursor.y + 10);
+  }
+
+  // Draw YOUR cursor
+  if (myCursorColor && typeof myCursorColor === 'string') {
+    let myColor = color(myCursorColor);
+    myColor.setAlpha(150);
+    fill(myColor);
+  } else {
+    // Fallback to default green
+    fill(100, 255, 200, 150);
+  }
+
+  noStroke();
+  circle(mouseX, mouseY, 15);
+  fill(255);
+  textFont('Tiny5');
+  text(myName, mouseX + 10, mouseY + 10);
+
+
+  // // Draw other users' cursors
+  // for (let id in otherCursors) {
+  //   let cursor = otherCursors[id];
+
+  //   // Draw cursor dot
+  //   fill(255, 100, 200);
+  //   noStroke();
+  //   circle(cursor.x, cursor.y, 15);
+
+  //   // Draw name
+  //   fill(255);
+  //   textSize(16);
+  //   textAlign(LEFT, TOP);
+  //   text(cursor.name, cursor.x + 10, cursor.y + 10);
+  // }
+
+  // // Draw YOUR cursor
+  // fill(100, 255, 200);
+  // noStroke();
+  // circle(mouseX, mouseY, 15);
+  // fill(255);
+  // text(myName, mouseX + 10, mouseY + 10);
 
   // // Debug info
   // fill(255, 0, 0);
@@ -229,21 +314,24 @@ function createFloor() {
   }
 
   // p5 play chain colliders vertex mode
+
+  let offsetY = 100 / height
+
   floor = new Sprite([
-    [width * 0.2, height * 0.51],
-    [width * 0.267, height * 0.68],
-    [width * 0.333, height * 0.73],
-    [width * 0.4, height * 0.78],
-    [width * 0.467, height * 0.82],
-    [width * 0.533, height * 0.82],
-    [width * 0.6, height * 0.78],
-    [width * 0.667, height * 0.73],
-    [width * 0.733, height * 0.68],
-    [width * 0.8, height * 0.51]
+    [width * 0.2, height * (0.51 + offsetY)],
+    [width * 0.267, height * (0.68 + offsetY)],
+    [width * 0.333, height * (0.73 + offsetY)],
+    [width * 0.4, height * (0.78 + offsetY)],
+    [width * 0.467, height * (0.82 + offsetY)],
+    [width * 0.533, height * (0.82 + offsetY)],
+    [width * 0.6, height * (0.78 + offsetY)],
+    [width * 0.667, height * (0.73 + offsetY)],
+    [width * 0.733, height * (0.68 + offsetY)],
+    [width * 0.8, height * (0.51 + offsetY)]
   ]);
 
   floor.collider = 'static';
-  floor.color = color(0, 0, 200, 1);
+  floor.color = color(0, 0, 200, 255);
 }
 
 function createStone() {
@@ -253,20 +341,20 @@ function createStone() {
     stone.remove();
   }
 
-  let offsetPx = 40 / height; // offset y position for easier adjustment later
+  let offsetY = 120 / height; // offset y position for easier adjustment later
 
   stone = new Sprite([
-    [width * 0.4, height * (0.6 + offsetPx)],
-    // [width * 0.442, height * (0.52 + offsetPx)],    
-    [width * 0.47, height * (0.51 + offsetPx)],
-    // [width * 0.5, height * (0.5 + offsetPx)],       
-    [width * 0.517, height * (0.505 + offsetPx)],
-    [width * 0.55, height * (0.55 + offsetPx)],
-    // [width * 0.6, height * (0.55 + offsetPx)]     
+    [width * 0.4, height * (0.58 + offsetY)],
+    // [width * 0.442, height * (0.52 + offsetY)],    
+    [width * 0.46, height * (0.49 + offsetY)],
+    // [width * 0.5, height * (0.5 + offsetY)],       
+    [width * 0.53, height * (0.485 + offsetY)],
+    [width * 0.55, height * (0.5 + offsetY)],
+    // [width * 0.6, height * (0.55 + offsetY)]     
   ]);
 
   stone.collider = 'static';
-  stone.color = color(0, 0, 0, 1);
+  stone.color = color(0, 0, 0, 255);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -289,6 +377,28 @@ function selectColor(color) {
 }
 
 function mousePressed() {
+
+  // Prevent daisy creation on right click
+  if (mouseButton === RIGHT) {
+    return;
+  }
+
+  // Prevent daisy creation when clicking on buttons or UI elements
+  let clickedElement = document.elementFromPoint(mouseX, mouseY);
+
+  if (clickedElement && (
+    clickedElement.tagName === 'BUTTON' ||
+    clickedElement.tagName === 'INPUT' ||
+    clickedElement.tagName === 'LABEL' ||
+    clickedElement.closest('.color-btn') ||
+    clickedElement.closest('#aboutBtn') ||
+    clickedElement.closest('#color-selector') ||
+    clickedElement.closest('.popup-overlay')
+  )) {
+    console.log('Clicked on UI element, no daisy created');
+    return;
+  }
+
   // Create daisy data object
   let daisyData = {
     x: mouseX,
@@ -318,14 +428,27 @@ function createDaisy(daisyData) {
     daisy6.image.scale = 0.8;
   } else {
     daisy6.image = 'media/b-daisy-6.png';
+    daisy6.image.scale = 0.8;
   }
 
-  daisy6.vel.x = random(-2, 2);
-  daisy6.vel.y = random(-3, 1);
+  // daisy6.vel.x = random(-2, 2);
+  // daisy6.vel.y = random(-3, 1);
 
   daisy6Ary.push(daisy6);
 }
 
+function mouseMoved() {
+  // Send cursor position to server
+  if (p5l && p5l.socket && experienceStarted) {
+    p5l.socket.emit('cursor_move', {
+      x: mouseX,
+      y: mouseY
+    });
+  }
+
+  // Prevent default
+  return false;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                      about pop up page                                     */

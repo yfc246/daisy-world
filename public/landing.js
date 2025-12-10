@@ -1,6 +1,8 @@
 //claude helped with this set up!
 
 let currentScreen = 1;
+let selectedCursorColor = '#64FFC8'; // Default color
+
 
 function nextScreen(screenNumber) {
     // Hide current screen
@@ -13,6 +15,23 @@ function nextScreen(screenNumber) {
     currentScreen = screenNumber;
 }
 
+
+// color picker: Update preview when color changes
+document.addEventListener('DOMContentLoaded', () => {
+    const colorPicker = document.getElementById('cursorColorPicker');
+    const colorPreview = document.getElementById('colorPreview');
+    
+    if (colorPicker) {
+        colorPicker.addEventListener('input', (e) => {
+            selectedCursorColor = e.target.value;
+            if (colorPreview) {
+                colorPreview.style.color = selectedCursorColor;
+            }
+            console.log('Selected cursor color:', selectedCursorColor);
+        });
+    }
+});
+
 function enterExperience() {
     // Get the user's name
     const userName = document.getElementById('userName').value.trim();
@@ -22,8 +41,20 @@ function enterExperience() {
         localStorage.setItem('userName', userName);
     }
     
+    // Get the selected color from the picker
+    const colorPicker = document.getElementById('cursorColorPicker');
+    if (colorPicker) {
+        selectedCursorColor = colorPicker.value;
+    }
+    
+    // Store cursor color
+    localStorage.setItem('cursorColor', selectedCursorColor);
+    console.log('Saving color:', selectedCursorColor);
+
+
+
     // Hide all landing screens
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
         const screen = document.getElementById(`screen${i}`);
         if (screen) {
             screen.style.display = 'none';

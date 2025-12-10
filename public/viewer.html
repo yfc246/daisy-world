@@ -44,8 +44,8 @@
                 we can co live as organisms with nature as a whole.
             </p> -->
             <p class="description">
-                see how individual actions feeds into the feedback loop, and how we can co live as organisms with nature
-                as a whole.
+                See how individual action feeds into the environment.
+
             </p>
             <button class="next-btn" onclick="nextScreen(2)">NEXT</button>
         </div>
@@ -54,7 +54,8 @@
         <div class="screen" id="screen2">
             <h2>How to Participate</h2>
             <p class="instructions">
-                • Choose your daisy color (white or black)<br>
+                • Once the experience starts, you will see a live video broadcasted from Yafan's apartment<br>
+                • You can switch between white or black daisy color <br>
                 • Click to create daisies that interact with the space<br>
                 • Watch as they bounce and flow together<br>
                 • Share this moment with others
@@ -63,11 +64,21 @@
             <button class="next-btn" onclick="nextScreen(3)">NEXT</button>
         </div>
 
-        <!-- Screen 3: Name Input -->
+        <!-- Screen 3: Cursor Color -->
         <div class="screen" id="screen3">
+            <h2>Pick Your Cursor Color</h2>
+            <div id="cursor-color-picker">
+                <input type="color" id="cursorColorPicker" value="#fc03a5">
+            </div>
+            <button class="back-btn" onclick="nextScreen(2)">BACK</button>
+            <button class="next-btn" onclick="nextScreen(4)">NEXT</button>
+        </div>
+
+        <!-- Screen 4: Name Input -->
+        <div class="screen" id="screen4">
             <h2>What's your name?</h2>
             <input type="text" id="userName" placeholder="Enter your name" maxlength="20">
-            <button class="back-btn" onclick="nextScreen(2)">BACK</button>
+            <button class="back-btn" onclick="nextScreen(3)">BACK</button>
             <button class="enter-btn" onclick="enterExperience()">ENTER</button>
         </div>
 
@@ -86,7 +97,10 @@
                     <div class="popup-content">
                         <h2>About Daisyworld</h2>
                         <p>Inspired by Daisyworld, a mathematical simulation created by scientist James lovelock in 1983
-                            to prove his Gaia theory (read more here) by showing the population of black and white
+                            to prove his Gaia theory <a href="https://en.wikipedia.org/wiki/Daisyworld"
+                                target="_blank">(read more here)</a>
+
+                            by showing the population of black and white
                             daisies interacting with the environment over millions of years.
 
                             This project seeks to cultivate an environment that invites audience to observe minute
@@ -100,9 +114,8 @@
                             <li>Select white or black using the color buttons</li>
                             <li>Click anywhere to see daisies grow</li>
                             <li>Watch them interact with the environment</li>
-                            <!-- <li>Type messages to communicate with others</li> -->
+                            <li>Adjust brightness of the light in the physical world</li>
                         </ul>
-                        <!-- <p>Created with p5.js and WebRTC</p> -->
                     </div>
                 </div>
             </div>
@@ -124,10 +137,10 @@
 
 
             <!-- brightness slider -->
-            <div>
-                <label for="brightness-slider">Brightness: <span id="brightness-value">0</span></label>
-                <br>
-                <input type="range" id="brightness-slider" min="0" max="255" value="0">
+            <div class="slider-container">
+                <span class="slider-label">Brightness</span>
+                <input type="range" id="brightness-slider" min="0" max="255" value="128">
+                <span id="brightness-value" class="slider-value">128</span>
             </div>
 
             <!-- Status display -->

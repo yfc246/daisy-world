@@ -60,9 +60,10 @@ let io = new SocketIOServer(server, {
 io.sockets.on('connection', function (socket) {
   console.log(Date.now(), socket.id, "New client (Socket.IO)");
 
-  socket.isBroadcaster = false; // NEW: Default is viewer
+  socket.isBroadcaster = false; // Default is viewer
+  socket.userName = null; //Store user's name when they input
 
-  // NEW: Listen for broadcaster identification
+  // Listen for broadcaster identification
   socket.on('identify_broadcaster', function () {
     console.log(Date.now(), socket.id, "🔴 IDENTIFIED AS BROADCASTER");
     socket.isBroadcaster = true;
@@ -80,7 +81,7 @@ io.sockets.on('connection', function (socket) {
     rooms[room].push(socket);
     socket.room = room;
 
-    // NEW: If this socket identified as broadcaster, mark it
+    // If this socket identified as broadcaster, mark it
     if (socket.isBroadcaster) {
       broadcasters[room] = socket.id;
       console.log(Date.now(), socket.id, "🔴 is the BROADCASTER");
@@ -88,7 +89,7 @@ io.sockets.on('connection', function (socket) {
       console.log(Date.now(), socket.id, "👁️ is a VIEWER");
     }
 
-    // MODIFIED: Only send broadcaster's ID to viewers
+    // Only send broadcaster's ID to viewers
     let ids = [];
     if (broadcasters[room]) {
       // If this is a viewer, send them the broadcaster's ID
@@ -101,8 +102,9 @@ io.sockets.on('connection', function (socket) {
     socket.emit('listresults', ids);
   });
 
+
   socket.on('list', function () {
-    // MODIFIED: Only return broadcaster's ID
+    //  Only return broadcaster's ID
     let ids = [];
     if (broadcasters[socket.room] && socket.id !== broadcasters[socket.room]) {
       ids.push(broadcasters[socket.room]);
@@ -130,6 +132,29 @@ io.sockets.on('connection', function (socket) {
     }
   });
 
+
+  // User sends their name when they join
+  socket.on('set_username', function (name) {
+    socket.userName = name;
+    console.log(socket.id, 'set username to:', name);
+  });
+
+  // Handle cursor position updates
+  socket.on('cursor_move', function (data) {
+    // Broadcast cursor to everyone else in the room
+    if (socket.room && rooms[socket.room]) {
+      for (let i = 0; i < rooms[socket.room].length; i++) {
+        if (rooms[socket.room][i].id !== socket.id) {
+          rooms[socket.room][i].emit('cursor_move', {
+            id: socket.id,
+            x: data.x,
+            y: data.y,
+            name: socket.userName || 'Anonymous'
+          });
+        }
+      }
+    }
+  });
 
   socket.on('daisy_created', function (daisyData) {
     console.log('Daisy created:', daisyData);
@@ -163,6 +188,13 @@ io.sockets.on('connection', function (socket) {
       } else {
         console.log('👁️ VIEWER disconnected (not notifying others)');
         // Don't emit peer_disconnect for regular viewers
+      }
+
+      //remove cursor when clients disconnects
+      for (let i = 0; i < rooms[socket.room].length; i++) {
+        if (rooms[socket.room][i].id != socket.id) {
+          rooms[socket.room][i].emit('cursor_removed', socket.id);
+        }
       }
 
       // Remove from rooms array
